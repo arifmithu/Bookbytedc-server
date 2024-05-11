@@ -42,6 +42,14 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/books/:category", async (req, res) => {
+      const categ = req.params.category;
+      const query = { category: categ };
+      const cursor = allBooks.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
     console.log(
