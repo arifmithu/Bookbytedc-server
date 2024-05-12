@@ -26,6 +26,7 @@ async function run() {
     // await client.connect();
 
     const allBooks = client.db("BookDB").collection("Books");
+    const borrowedBooks = client.db("BookDB").collection("BorrowedBooks");
 
     // get all books
     app.get("/books", async (req, res) => {
@@ -52,9 +53,16 @@ async function run() {
 
     app.get("/:id", async (req, res) => {
       const bookId = req.params.id;
+      console.log(bookId);
       const query = { _id: new ObjectId(bookId) };
-      const cursor = allBooks.find(query);
-      const result = await cursor.toArray();
+      const cursor = await allBooks.findOne(query);
+      console.log(cursor);
+      // const result = await cursor.toArray();
+      res.send(cursor);
+    });
+    app.post("/books/borrowed", async (req, res) => {
+      const book = req.body;
+      const result = await borrowedBooks.insertOne(book);
       res.send(result);
     });
 
