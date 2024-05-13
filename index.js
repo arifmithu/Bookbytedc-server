@@ -38,7 +38,7 @@ async function run() {
     // add a book
     app.post("/books", async (req, res) => {
       const book = req.body;
-      console.log(book);
+      // console.log(book);
       const result = await allBooks.insertOne(book);
       res.send(result);
     });
@@ -53,17 +53,70 @@ async function run() {
 
     app.get("/:id", async (req, res) => {
       const bookId = req.params.id;
-      console.log(bookId);
+      // console.log(bookId);
       const query = { _id: new ObjectId(bookId) };
       const cursor = await allBooks.findOne(query);
-      console.log(cursor);
+      console.log("inside ", query, cursor);
       // const result = await cursor.toArray();
       res.send(cursor);
     });
-    app.post("/books/borrowed", async (req, res) => {
-      const book = req.body;
-      const result = await borrowedBooks.insertOne(book);
+    app.post("/books/borrowed/allbooks", async (req, res) => {
+      try {
+        const book = req.body;
+        console.log("hello", book);
+        const id = req.query.id;
+        console.log("getting", id);
+        const result = await borrowedBooks.insertOne(book);
+        console.log(result);
+        if (id) {
+          await allBooks.updateOne(
+            { _id: new ObjectId(id) },
+            { $inc: { quantity: -1 } }
+          );
+        }
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).send(error);
+      }
+    });
+    app.get("/books/borrowed/allbooks", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const cursor = borrowedBooks.find(query);
+      const result = await cursor.toArray();
+      console.log("result", result);
+      const bookIds = result.map((book) => new ObjectId(book.bookId));
+      const bookDetailsQuery = { _id: { $in: bookIds } };
+      const bookDetailsCursor = allBooks.find(bookDetailsQuery);
+      const bookDetails = await bookDetailsCursor.toArray();
+      const allBorrowedBooks = bookDetails.map((book) => {
+        const borrowedbook = result.find((e) => e.bookId == book._id);
+        return {
+          ...book,
+          borrowingDate: borrowedbook.borrowingDate,
+          returningDate: borrowedbook.returningDate,
+        };
+      });
+      // console.log("result", bookDetails);
+      res.send(allBorrowedBooks);
+    });
+
+    app.delete("/deleteBorrowedBook", async (req, res) => {
+      const id = req.query.id;
+      const query = { bookId: id };
+      const result = await borrowedBooks.deleteOne(query);
+      const update = allBooks.updateOne(
+        { _id: new ObjectId(id) },
+        { $inc: { quantity: 1 } }
+      );
       res.send(result);
+    });
+
+    app.put("/books", async (req, res) => {
+      const email = req.query.email;
+      const id = req.query.id;
+      console.log(email, id);
     });
 
     // Send a ping to confirm a successful connection
