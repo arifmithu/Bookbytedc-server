@@ -104,6 +104,7 @@ async function run() {
     app.delete("/deleteBorrowedBook", async (req, res) => {
       const id = req.query.id;
       const query = { bookId: id };
+      console.log("inside wrong");
       const result = await borrowedBooks.deleteOne(query);
       const update = allBooks.updateOne(
         { _id: new ObjectId(id) },
@@ -115,6 +116,7 @@ async function run() {
     app.put("/books", async (req, res) => {
       const id = req.query.id;
       const book = req.body;
+      console.log("hello", book);
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
 
