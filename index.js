@@ -56,7 +56,6 @@ async function run() {
       // console.log(bookId);
       const query = { _id: new ObjectId(bookId) };
       const cursor = await allBooks.findOne(query);
-      console.log("inside ", query, cursor);
       // const result = await cursor.toArray();
       res.send(cursor);
     });
@@ -114,9 +113,25 @@ async function run() {
     });
 
     app.put("/books", async (req, res) => {
-      const email = req.query.email;
       const id = req.query.id;
-      console.log(email, id);
+      const book = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+
+      const updatedBook = {
+        $set: {
+          bookName: book.bookName,
+          authorName: book.authorName,
+          category: book.category,
+          quantity: book.quantity,
+          image: book.image,
+          description: book.description,
+          rating: book.rating,
+          tags: book.tags,
+        },
+      };
+      const result = await allBooks.updateOne(filter, updatedBook, options);
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
