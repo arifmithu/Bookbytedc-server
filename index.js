@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
@@ -10,8 +11,8 @@ const port = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
-      "http://localhost:5000",
-      "http://localhost:5173",
+      // "http://localhost:5000",
+      // "http://localhost:5173",
       "https://bookbyte-dc.web.app",
       "https://bookbyte-dc.firebaseapp.com",
     ],
@@ -19,6 +20,7 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.cjxdffi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -30,6 +32,21 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const logger = (req, res, next) => {
+  console.log("logger", req.method, req.url);
+  next();
+};
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  if (!token) return res.status(401).send({ message: "unauthorized access" });
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) return res.status(401).send({ message: "unauthorized access" });
+    req.user = decoded;
+    next();
+  });
+  // next();
+};
 
 async function run() {
   try {
@@ -92,11 +109,9 @@ async function run() {
     app.post("/books/borrowed/allbooks", async (req, res) => {
       try {
         const book = req.body;
-        console.log("hello", book);
         const id = req.query.id;
         console.log("getting", id);
         const result = await borrowedBooks.insertOne(book);
-        console.log(result);
         if (id) {
           await allBooks.updateOne(
             { _id: new ObjectId(id) },
@@ -109,27 +124,35 @@ async function run() {
         res.status(500).send(error);
       }
     });
-    app.get("/books/borrowed/allbooks", async (req, res) => {
-      const email = req.query.email;
-      const query = { email: email };
-      const cursor = borrowedBooks.find(query);
-      const result = await cursor.toArray();
-      console.log("result", result);
-      const bookIds = result.map((book) => new ObjectId(book.bookId));
-      const bookDetailsQuery = { _id: { $in: bookIds } };
-      const bookDetailsCursor = allBooks.find(bookDetailsQuery);
-      const bookDetails = await bookDetailsCursor.toArray();
-      const allBorrowedBooks = bookDetails.map((book) => {
-        const borrowedbook = result.find((e) => e.bookId == book._id);
-        return {
-          ...book,
-          borrowingDate: borrowedbook.borrowingDate,
-          returningDate: borrowedbook.returningDate,
-        };
-      });
-      // console.log("result", bookDetails);
-      res.send(allBorrowedBooks);
-    });
+    app.get(
+      "/books/borrowed/allbooks",
+      logger,
+      verifyToken,
+      async (req, res) => {
+        const email = req.query.email;
+        const query = { email: email };
+        if (req.user.email != email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
+        const cursor = borrowedBooks.find(query);
+        const result = await cursor.toArray();
+        console.log("result", result);
+        const bookIds = result.map((book) => new ObjectId(book.bookId));
+        const bookDetailsQuery = { _id: { $in: bookIds } };
+        const bookDetailsCursor = allBooks.find(bookDetailsQuery);
+        const bookDetails = await bookDetailsCursor.toArray();
+        const allBorrowedBooks = bookDetails.map((book) => {
+          const borrowedbook = result.find((e) => e.bookId == book._id);
+          return {
+            ...book,
+            borrowingDate: borrowedbook.borrowingDate,
+            returningDate: borrowedbook.returningDate,
+          };
+        });
+        // console.log("result", bookDetails);
+        res.send(allBorrowedBooks);
+      }
+    );
 
     app.delete("/deleteBorrowedBook", async (req, res) => {
       const id = req.query.id;
