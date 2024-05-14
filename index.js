@@ -1,12 +1,23 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      // "http://localhost:5000",
+      "http://localhost:5173",
+      "https://bookbyte-dc.web.app",
+      "https://bookbyte-dc.firebaseapp.com",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.cjxdffi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -27,6 +38,14 @@ async function run() {
 
     const allBooks = client.db("BookDB").collection("Books");
     const borrowedBooks = client.db("BookDB").collection("BorrowedBooks");
+
+    app.post("/user/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send(token);
+    });
 
     // get all books
     app.get("/books", async (req, res) => {
