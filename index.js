@@ -12,7 +12,7 @@ app.use(
   cors({
     origin: [
       // "http://localhost:5000",
-      // "http://localhost:5173",
+      "http://localhost:5173",
       "https://bookbyte-dc.web.app",
       "https://bookbyte-dc.firebaseapp.com",
     ],
@@ -38,8 +38,10 @@ const logger = (req, res, next) => {
   next();
 };
 const verifyToken = (req, res, next) => {
+  console.log(JSON.stringify(req.cookies));
   const token = req?.cookies?.token;
   if (!token) return res.status(401).send({ message: "unauthorized access" });
+  console.log("token received");
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) return res.status(401).send({ message: "unauthorized access" });
     req.user = decoded;
@@ -76,7 +78,7 @@ async function run() {
     });
 
     // get all books
-    app.get("/books", async (req, res) => {
+    app.get("/books", logger, verifyToken, async (req, res) => {
       const cursor = allBooks.find();
       const result = await cursor.toArray();
       res.send(result);
