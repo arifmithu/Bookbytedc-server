@@ -10,7 +10,7 @@ const port = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
-      // "http://localhost:5000",
+      "http://localhost:5000",
       "http://localhost:5173",
       "https://bookbyte-dc.web.app",
       "https://bookbyte-dc.firebaseapp.com",
@@ -39,12 +39,23 @@ async function run() {
     const allBooks = client.db("BookDB").collection("Books");
     const borrowedBooks = client.db("BookDB").collection("BorrowedBooks");
 
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    };
+
     app.post("/user/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: "1h",
       });
-      res.send(token);
+      res.cookie("token", token, cookieOptions).send({ success: true });
+    });
+
+    app.post("/user/jwt/token/logout", async (req, res) => {
+      const user = req.body;
+      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
     });
 
     // get all books
