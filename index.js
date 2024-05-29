@@ -11,8 +11,8 @@ const port = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
-      // "http://localhost:5000",
-      "http://localhost:5173",
+      "http://localhost:5000",
+      "http://localhost:5174",
       "https://bookbyte-dc.web.app",
       "https://bookbyte-dc.firebaseapp.com",
     ],
@@ -47,7 +47,6 @@ const verifyToken = (req, res, next) => {
     req.user = decoded;
     next();
   });
-  // next();
 };
 
 async function run() {
@@ -78,9 +77,20 @@ async function run() {
     });
 
     // get all books
-    app.get("/books", logger, verifyToken, async (req, res) => {
+    app.get("/books", async (req, res) => {
       const cursor = allBooks.find();
       const result = await cursor.toArray();
+      res.send(result);
+    });
+    // get a book by search
+    app.get("/books/:title", async (req, res) => {
+      const bookName = req.params.title;
+      console.log(bookName, "bookname");
+      const query = { bookName: bookName };
+      const result = await allBooks.findOne(query);
+      if (result == null) {
+        return res.send({ status: 404 });
+      }
       res.send(result);
     });
 
