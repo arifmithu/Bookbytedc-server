@@ -13,8 +13,10 @@ app.use(
     origin: [
       "http://localhost:5000",
       "http://localhost:5174",
+      "http://localhost:5173",
       "https://bookbyte-dc.web.app",
       "https://bookbyte-dc.firebaseapp.com",
+      "https://bookbytedc.netlify.app",
     ],
     credentials: true,
   })
@@ -102,12 +104,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/books/:category", async (req, res) => {
+    app.get("/books/category/:category", async (req, res) => {
       const categ = req.params.category;
-      const query = { category: categ };
-      const cursor = allBooks.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
+      console.log(categ);
+      const query = { category: { $in: [categ] } };
+      const cursor = await allBooks.find(query).toArray();
+      res.send(cursor);
     });
 
     app.get("/:id", async (req, res) => {
